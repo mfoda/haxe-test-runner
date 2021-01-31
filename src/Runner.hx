@@ -1,3 +1,6 @@
+package;
+
+import RunnerResult;
 import sys.io.File;
 import sys.FileSystem as Fs;
 import haxe.io.Path;
@@ -12,13 +15,14 @@ typedef RunArgs = {
 }
 
 typedef Paths = {
-	inputSol:String,
+	inputDir:String,
+	tmpDir:String,
+	outDir:String,
+	inputSolution:String,
 	inputTest:String,
-	tmpSol:String,
+	tmpSolution:String,
 	tmpTest:String,
-	tmpReporter:String,
 	outResults:String,
-	outDir:String
 }
 
 class Runner {
@@ -31,64 +35,64 @@ Options:
 	public static function main() {
 		var runArgs = parseArgs();
 		var paths = getPaths(runArgs);
-		prepareFiles(paths);
-
+		prepareOutputDir(paths);
 		var exitCode = run(paths);
 		Sys.exit(exitCode);
 	}
 
 	// Run the tests for the given exercise and produce a results.json
 	static function run(paths:Paths):Int {
-		var compArgs = ["-m", '${paths.tmpTest}', "--no-output", "-p", '${paths.outDir}',];
+		// run compile
+		var compArgs = ["-cp", '${paths.tmpDir}', "-m", "Test.hx", "--no-output", "-L", "buddy"];
 		var compProc = new sys.io.Process("haxe", compArgs);
-		var compExitCode = compProc.exitCode();
-		var compileResult = compProc.stdout.readAll().toString();
-		if (compExitCode != 0) {}
-
+		if (compProc.exitCode() != 0) {
+			var compError = compProc.stderr.readAll().toString();
+			writeTopLevelErrorJson(paths.outResults, compError);
+		}
+		// run test
 		var testArgs = [
-			"--main",
-			'${paths.tmpTest}',
-			"--interp",
-			"--class-path",
-			'${paths.outDir}',
-			"--define",
-			"buddy-ignore-passing-specs",
-			"buddy-colors",
-			'reporter=${paths.tmpReporter}'
+			"-cp", '${paths.tmpDir}', "-x", "Test.hx", "-L", "buddy", "-D", "buddy-ignore-passing-specs", "-D", 'reporter=Reporter'
 		];
-		var testExitCode = 0;
-		var testResult = new sys.io.Process("haxe", []).stdout.readAll().toString();
+		var testProc = new sys.io.Process("haxe", testArgs);
+		var testResult = testProc.stdout.readAll().toString();
+		File.saveContent(paths.outResults, testResult);
 		return 0;
-	}
-
-	static function prepareFiles(paths:Paths) {
-		Fs.createDirectory(paths.outDir);
-		File.copy(paths.inputSol, paths.tmpSol);
-		File.copy(paths.inputTest, paths.tmpTest);
 	}
 
 	static function getPaths(args:RunArgs):Paths {
 		function captalize(str:String)
 			return str.charAt(0).toUpperCase() + str.substr(1);
 
-		var className = args.slug.split("-").map(captalize).join("");
-		var solName = '$className.hx';
+		var solName = args.slug.split("-").map(captalize).join("");
+		solName = '$solName.hx';
 		var testName = "Test.hx";
 		var tmpDir = createTmpDir();
 		return {
-			inputSol: Path.join([args.inputDir, "src", solName]),
+			inputDir: args.inputDir,
+			tmpDir: tmpDir,
+			outDir: args.outputDir,
+			inputSolution: Path.join([args.inputDir, "src", solName]),
 			inputTest: Path.join([args.inputDir, "test", testName]),
-			tmpSol: Path.join([tmpDir, solName]),
+			tmpSolution: Path.join([tmpDir, solName]),
 			tmpTest: Path.join([tmpDir, testName]),
-			tmpReporter: Path.join([tmpDir, "JsonReporter.hx"]),
 			outResults: Path.join([args.outputDir, "results.json"]),
-			outDir: args.outputDir
 		};
+	}
+
+	static function prepareOutputDir(paths:Paths) {
+		Fs.createDirectory(paths.outDir);
+		File.copy(paths.inputSolution, paths.tmpSolution);
+		File.copy(paths.inputTest, paths.tmpTest);
+		File.copy("Reporter.hx", '${paths.tmpDir}/Reporter.hx');
+		File.copy("RunnerResult.hx", '${paths.tmpDir}/RunnerResult.hx');
+		File.copy("TestResult.hx", '${paths.tmpDir}/TestResult.hx');
 	}
 
 	static function createTmpDir():String {
 		var path = "/tmp/haxe_test_runner";
-		Fs.deleteDirectory(path);
+		// TODO: delete existing tmpDir
+		// if (Fs.exists(path))
+		// 	Fs.deleteDirectory(path);
 		Fs.createDirectory(path);
 		return path;
 	}
@@ -103,18 +107,20 @@ Options:
 		writeHelp();
 	}
 
-	static function writeErrorJsonResult(path:String, errorMsg:String) {
-		var result = {
-			status: "error",
-			message: errorMsg,
-			tests: []
-		};
-		File.saveContent(path, haxe.Json.stringify(result));
+	static function writeTopLevelErrorJson(path:String, errorMsg:String) {
+		var result = new RunnerResult();
+		result.status = ResultStatus.Error(errorMsg);
+		File.saveContent(path, result.toJsonString());
 	}
 
-	// Checks command-line arguments and returns RunArgs if valid or exits on error
+	// Check command-line arguments and return RunArgs if valid or exits on error
 	static function parseArgs():RunArgs {
-		var args = Sys.args();
+		// var args = Sys.args();
+		var args = [
+			"hello-world",
+			"D:/source/haxe/haxe-test-runner/test/example-pass/hello-world/",
+			"D:/source/haxe/haxe-test-runner/out/"
+		];
 		var flags = args.filter(x -> x.startsWith("-")).map(x -> x.toLowerCase());
 		if (flags.contains("-h") || flags.contains("--help"))
 			writeHelp();
