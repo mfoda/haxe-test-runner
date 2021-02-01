@@ -23,7 +23,7 @@ class Reporter implements buddy.reporting.Reporter {
 	}
 
 	public function done(suites:Iterable<Suite>, status:Bool):Promise<Iterable<Suite>> {
-		var testResults = [for (s in suites) suiteToTestResults(s)].flatten();
+		var testResults = suites.map(s -> suiteToTestResults(s)).flatten();
 		var resultStatus = status ? ResultStatus.Pass : ResultStatus.Fail();
 		var runnerResult = new RunnerResult();
 		runnerResult.status = resultStatus;
@@ -39,32 +39,33 @@ class Reporter implements buddy.reporting.Reporter {
 			switch step {
 				case TSpec(spec):
 					results.push(specToTestResult(spec));
-				case TSuite(sui):
-					results = results.concat(suiteToTestResults(sui));
+				case TSuite(s):
+					results = results.concat(suiteToTestResults(s));
 			}
 		}
 		return results;
 	}
 
 	static function specToTestResult(spec:Spec):TestResult {
-		var result = new TestResult();
-		result.name = spec.fileName;
-		var status:ResultStatus;
+		var r = new TestResult();
+		r.name = spec.description;
+		r.testCode = spec.fileName;
 		switch (spec.status) {
 			case Unknown:
-				status = ResultStatus.Error(spec.description);
+				r.status = ResultStatus.Error("");
+				r.message = spec.traces.join("\n");
 			case Passed:
-				status = ResultStatus.Pass;
+				r.status = ResultStatus.Pass;
 			case Pending:
-				status = ResultStatus.Pass;
+				r.status = ResultStatus.Pass;
 			case Failed:
-				status = ResultStatus.Fail(spec.description);
+				r.status = ResultStatus.Fail(spec.description);
+				var failureErrors = spec.failures.map(f -> f.error).join("\n");
+				// var failureStacks = spec.failures.map(f -> f.stack).join("\n");
+				r.message = failureErrors;
+				// r.output = "";
 		}
-		result.status = status;
-		result.message = spec.traces.join("\n");
-		result.output = spec.description;
-		result.testCode = "";
-		return result;
+		return r;
 	}
 
 	// Convenience method
