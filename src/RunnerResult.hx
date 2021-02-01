@@ -1,5 +1,7 @@
 package;
 
+import haxe.DynamicAccess;
+
 enum ResultStatus {
 	Pass;
 	Fail(?message:String);
@@ -16,17 +18,17 @@ class RunnerResult {
 	public function new() {}
 
 	public function toJsonString():String {
-		var message = "";
+		var message:String = null;
 		switch (status) {
 			case Fail(msg), Error(msg):
 				message = msg;
 			case Pass:
 		}
 		return haxe.Json.stringify({
-			version: version,
-			status: status.getName(),
+			// version: version,
+			status: status.getName().toLowerCase(),
 			tests: tests,
 			message: message
-		});
+		}, "  ");
 	}
 }

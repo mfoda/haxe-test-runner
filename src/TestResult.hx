@@ -14,7 +14,7 @@ class TestResult {
 	public function toJsonString():String {
 		return haxe.Json.stringify({
 			name: name,
-			status: status.getName(),
+			status: status.getName().toLowerCase(),
 			message: message,
 			output: output,
 			testCode: testCode

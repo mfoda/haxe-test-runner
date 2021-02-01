@@ -17,12 +17,12 @@ typedef RunArgs = {
 typedef Paths = {
 	inputDir:String,
 	tmpDir:String,
-	outDir:String,
+	outputDir:String,
 	inputSolution:String,
 	inputTest:String,
 	tmpSolution:String,
 	tmpTest:String,
-	outResults:String,
+	outputResults:String,
 }
 
 class Runner {
@@ -42,20 +42,29 @@ Options:
 
 	// Run the tests for the given exercise and produce a results.json
 	static function run(paths:Paths):Int {
-		// run compile
+		// if tests can't compile then exit without running, report compile error
 		var compArgs = ["-cp", '${paths.tmpDir}', "-m", "Test.hx", "--no-output", "-L", "buddy"];
 		var compProc = new sys.io.Process("haxe", compArgs);
-		if (compProc.exitCode() != 0) {
+		var compExitCode = compProc.exitCode();
+		if (compExitCode != 0) {
 			var compError = compProc.stderr.readAll().toString();
-			writeTopLevelErrorJson(paths.outResults, compError);
+			writeTopLevelErrorJson(paths.outputResults, compError.trim());
+			return compExitCode;
 		}
-		// run test
+		// run tests, report test result
 		var testArgs = [
-			"-cp", '${paths.tmpDir}', "-x", "Test.hx", "-L", "buddy", "-D", "buddy-ignore-passing-specs", "-D", 'reporter=Reporter'
+			"-cp",
+			'${paths.tmpDir}',
+			"-x",
+			"Test.hx",
+			"-L",
+			"buddy",
+			"-D",
+			'reporter=Reporter'
 		];
 		var testProc = new sys.io.Process("haxe", testArgs);
 		var testResult = testProc.stdout.readAll().toString();
-		File.saveContent(paths.outResults, testResult);
+		File.saveContent(paths.outputResults, testResult);
 		return 0;
 	}
 
@@ -70,26 +79,27 @@ Options:
 		return {
 			inputDir: args.inputDir,
 			tmpDir: tmpDir,
-			outDir: args.outputDir,
+			outputDir: args.outputDir,
 			inputSolution: Path.join([args.inputDir, "src", solName]),
 			inputTest: Path.join([args.inputDir, "test", testName]),
 			tmpSolution: Path.join([tmpDir, solName]),
 			tmpTest: Path.join([tmpDir, testName]),
-			outResults: Path.join([args.outputDir, "results.json"]),
+			outputResults: Path.join([args.outputDir, "results.json"]),
 		};
 	}
 
 	static function prepareOutputDir(paths:Paths) {
-		Fs.createDirectory(paths.outDir);
+		var appDir = Path.directory(Sys.programPath());
+		Fs.createDirectory(paths.outputDir);
 		File.copy(paths.inputSolution, paths.tmpSolution);
 		File.copy(paths.inputTest, paths.tmpTest);
-		File.copy("Reporter.hx", '${paths.tmpDir}/Reporter.hx');
-		File.copy("RunnerResult.hx", '${paths.tmpDir}/RunnerResult.hx');
-		File.copy("TestResult.hx", '${paths.tmpDir}/TestResult.hx');
+		File.copy('$appDir/Reporter.hx', '${paths.tmpDir}/Reporter.hx');
+		File.copy('$appDir/RunnerResult.hx', '${paths.tmpDir}/RunnerResult.hx');
+		File.copy('$appDir/TestResult.hx', '${paths.tmpDir}/TestResult.hx');
 	}
 
 	static function createTmpDir():String {
-		var path = "/tmp/haxe_test_runner";
+		var path = "./tmp/haxe_test_runner";
 		// TODO: delete existing tmpDir
 		// if (Fs.exists(path))
 		// 	Fs.deleteDirectory(path);
@@ -115,12 +125,12 @@ Options:
 
 	// Check command-line arguments and return RunArgs if valid or exits on error
 	static function parseArgs():RunArgs {
-		// var args = Sys.args();
-		var args = [
-			"hello-world",
-			"D:/source/haxe/haxe-test-runner/test/example-pass/hello-world/",
-			"D:/source/haxe/haxe-test-runner/out/"
-		];
+		var args = Sys.args();
+		// var args = [
+		// 	"identity",
+		// 	"D:/source/haxe/haxe-test-runner/test/error/compiletime_error_empty_solution/identity/",
+		// 	"D:/source/haxe/haxe-test-runner/test/error/compiletime_error_empty_solution/out/"
+		// ];
 		var flags = args.filter(x -> x.startsWith("-")).map(x -> x.toLowerCase());
 		if (flags.contains("-h") || flags.contains("--help"))
 			writeHelp();
