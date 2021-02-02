@@ -1,5 +1,6 @@
 package;
 
+import haxe.Json;
 import RunnerResult;
 import sys.io.File;
 import sys.FileSystem as FS;
@@ -51,8 +52,8 @@ Options:
 		var errorResult = proc.stderr.readAll().toString();
 		var exitCode = proc.exitCode();
 		proc.close();
-		// append user output to results
-		
+		// TODO: append user output to results
+
 		if (exitCode != 0)
 			writeTopLevelErrorJson(paths.outputResults, errorResult.trim());
 
@@ -111,17 +112,18 @@ Options:
 	static function writeTopLevelErrorJson(path:String, errorMsg:String) {
 		var result = new RunnerResult();
 		result.status = ResultStatus.Error(errorMsg);
-		File.saveContent(path, result.toJsonString());
+		var resultJson = Json.stringify(result.toJsonObj(), "\t");
+		File.saveContent(path, resultJson);
 	}
 
 	// Check command-line arguments and return RunArgs if valid or exit with error
 	static function parseArgs():RunArgs {
 		var args = Sys.args();
-		args = [
-			"identity",
-			"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/identity/",
-			"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/tmp_output/"
-		];
+		// args = [
+		// 	"identity",
+		// 	"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/identity/",
+		// 	"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/tmp_output/"
+		// ];
 		var flags = args.filter(x -> x.startsWith("-")).map(x -> x.toLowerCase());
 		if (flags.contains("-h") || flags.contains("--help"))
 			writeHelp();

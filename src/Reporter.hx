@@ -1,5 +1,6 @@
 package;
 
+import haxe.Json;
 import sys.io.File;
 import RunnerResult;
 import promhx.Deferred;
@@ -33,7 +34,8 @@ class Reporter implements buddy.reporting.Reporter {
 		var args = Sys.args();
 		var flagIdx = args.indexOf("-resultPath");
 		var resultPath = args[flagIdx + 1];
-		File.saveContent(resultPath, runnerResult.toJsonString());
+		var resultJson = Json.stringify(runnerResult.toJsonObj(), "\t");
+		File.saveContent(resultPath, resultJson);
 		return resolveImmediately(suites);
 	}
 

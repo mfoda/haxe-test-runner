@@ -11,13 +11,13 @@ class TestResult {
 
 	public function new() {}
 
-	public function toJsonString():String {
-		return haxe.Json.stringify({
+	public function toJsonObj():Dynamic {
+		return {
 			name: name,
 			status: status.getName().toLowerCase(),
 			message: message,
 			output: output,
 			testCode: testCode
-		});
+		};
 	}
 }

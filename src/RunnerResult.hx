@@ -17,20 +17,18 @@ class RunnerResult {
 
 	public function new() {}
 
-	public function toJsonString():String {
+	public function toJsonObj():Dynamic {
 		var message:String = null;
 		switch (status) {
 			case Fail(msg), Error(msg):
 				message = msg;
 			case Pass:
 		}
-		// var testsEncoded = tests.map(x -> Json.parse(x.toJsonString()));
-		return Json.stringify({
-			// version: version,
 		return {
 			version: version,
 			status: status.getName().toLowerCase(),
 			tests: tests,
 			message: message
+		};
 	}
 }
