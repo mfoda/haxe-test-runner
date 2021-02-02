@@ -27,9 +27,10 @@ class RunnerResult {
 		// var testsEncoded = tests.map(x -> Json.parse(x.toJsonString()));
 		return Json.stringify({
 			// version: version,
+		return {
+			version: version,
 			status: status.getName().toLowerCase(),
 			tests: tests,
 			message: message
-		}, "  ");
 	}
 }
