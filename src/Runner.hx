@@ -2,8 +2,9 @@ package;
 
 import RunnerResult;
 import sys.io.File;
-import sys.FileSystem as Fs;
+import sys.FileSystem as FS;
 import haxe.io.Path;
+import FileTools;
 
 using StringTools;
 using Lambda;
@@ -42,17 +43,7 @@ Options:
 
 	// Run the tests for the given exercise and produce a results.json
 	static function run(paths:Paths):Int {
-		// if tests can't compile then exit without running, report compile error
-		var compArgs = ["-cp", '${paths.tmpDir}', "-m", "Test.hx", "--no-output", "-L", "buddy"];
-		var compProc = new sys.io.Process("haxe", compArgs);
-		var compExitCode = compProc.exitCode();
-		if (compExitCode != 0) {
-			var compError = compProc.stderr.readAll().toString();
-			writeTopLevelErrorJson(paths.outputResults, compError.trim());
-			return compExitCode;
-		}
-		// run tests, report test result
-		var testArgs = [
+		var args = [
 			"-cp",
 			'${paths.tmpDir}',
 			"-x",
@@ -62,16 +53,22 @@ Options:
 			"-D",
 			'reporter=Reporter'
 		];
-		var testProc = new sys.io.Process("haxe", testArgs);
-		var testResult = testProc.stdout.readAll().toString();
-		File.saveContent(paths.outputResults, testResult);
-		return 0;
+		var proc = new sys.io.Process("haxe", args);
+		var result = proc.stdout.readAll().toString();
+		var exitCode = proc.exitCode();
+		if (exitCode != 0) {
+			var errorResult = proc.stderr.readAll().toString();
+			writeTopLevelErrorJson(paths.outputResults, errorResult.trim());
+		} else
+			File.saveContent(paths.outputResults, result);
+		return exitCode;
 	}
 
 	static function getPaths(args:RunArgs):Paths {
 		function captalize(str:String)
 			return str.charAt(0).toUpperCase() + str.substr(1);
 
+		// slug to classname, e.g. hello-world -> HelloWorld.hx
 		var solName = args.slug.split("-").map(captalize).join("");
 		solName = '$solName.hx';
 		var testName = "Test.hx";
@@ -90,9 +87,10 @@ Options:
 
 	static function prepareOutputDir(paths:Paths) {
 		var appDir = Path.directory(Sys.programPath());
-		Fs.createDirectory(paths.outputDir);
+		FS.createDirectory(paths.outputDir);
 		File.copy(paths.inputSolution, paths.tmpSolution);
 		File.copy(paths.inputTest, paths.tmpTest);
+		// copy our custom reporter to hook into it
 		File.copy('$appDir/Reporter.hx', '${paths.tmpDir}/Reporter.hx');
 		File.copy('$appDir/RunnerResult.hx', '${paths.tmpDir}/RunnerResult.hx');
 		File.copy('$appDir/TestResult.hx', '${paths.tmpDir}/TestResult.hx');
@@ -100,10 +98,8 @@ Options:
 
 	static function createTmpDir():String {
 		var path = "./tmp/haxe_test_runner";
-		// TODO: delete existing tmpDir
-		// if (Fs.exists(path))
-		// 	Fs.deleteDirectory(path);
-		Fs.createDirectory(path);
+		FileTools.deleteDirRecursively(path);
+		FS.createDirectory(path);
 		return path;
 	}
 
@@ -123,14 +119,9 @@ Options:
 		File.saveContent(path, result.toJsonString());
 	}
 
-	// Check command-line arguments and return RunArgs if valid or exits on error
+	// Check command-line arguments and return RunArgs if valid or exit with error
 	static function parseArgs():RunArgs {
 		var args = Sys.args();
-		// var args = [
-		// 	"identity",
-		// 	"D:/source/haxe/haxe-test-runner/test/error/compiletime_error_empty_solution/identity/",
-		// 	"D:/source/haxe/haxe-test-runner/test/error/compiletime_error_empty_solution/out/"
-		// ];
 		var flags = args.filter(x -> x.startsWith("-")).map(x -> x.toLowerCase());
 		if (flags.contains("-h") || flags.contains("--help"))
 			writeHelp();
@@ -148,7 +139,7 @@ Options:
 			writeError("inputDir must end with a trailing slash");
 		if (outputDir.charAt(outputDir.length - 1) != "/")
 			writeError("outputDir must end with a trailing slash");
-		if (!Fs.exists(inputDir))
+		if (!FS.exists(inputDir))
 			writeError('inputDir "$inputDir" does not exist');
 
 		return {
