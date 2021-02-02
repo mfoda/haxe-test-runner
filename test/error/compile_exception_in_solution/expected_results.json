@@ -1,0 +1,5 @@
+{
+  "status": "error",
+  "tests": null,
+  "message": "./tmp/haxe_test_runner/Identity.hx:4: characters 17-22 : Uncaught exception compile exception"
+}
