@@ -1,5 +1,6 @@
 package;
 
+import sys.io.File;
 import RunnerResult;
 import promhx.Deferred;
 import buddy.BuddySuite;
@@ -29,7 +30,10 @@ class Reporter implements buddy.reporting.Reporter {
 		runnerResult.status = resultStatus;
 		runnerResult.tests = testResults;
 
-		Sys.print(runnerResult.toJsonString());
+		var args = Sys.args();
+		var flagIdx = args.indexOf("-resultPath");
+		var resultPath = args[flagIdx + 1];
+		File.saveContent(resultPath, runnerResult.toJsonString());
 		return resolveImmediately(suites);
 	}
 

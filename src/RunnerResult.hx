@@ -1,6 +1,6 @@
 package;
 
-import haxe.DynamicAccess;
+import haxe.Json;
 
 enum ResultStatus {
 	Pass;
@@ -24,7 +24,8 @@ class RunnerResult {
 				message = msg;
 			case Pass:
 		}
-		return haxe.Json.stringify({
+		// var testsEncoded = tests.map(x -> Json.parse(x.toJsonString()));
+		return Json.stringify({
 			// version: version,
 			status: status.getName().toLowerCase(),
 			tests: tests,

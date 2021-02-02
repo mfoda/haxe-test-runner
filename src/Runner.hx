@@ -44,23 +44,18 @@ Options:
 	// Run the tests for the given exercise and produce a results.json
 	static function run(paths:Paths):Int {
 		var args = [
-			"-cp",
-			'${paths.tmpDir}',
-			"-x",
-			"Test.hx",
-			"-L",
-			"buddy",
-			"-D",
-			'reporter=Reporter'
+			"-cp", '${paths.tmpDir}', "-L", "buddy", "-D", 'reporter=Reporter', "--run", "Test", "-resultPath", '${paths.outputDir}'
 		];
 		var proc = new sys.io.Process("haxe", args);
-		var result = proc.stdout.readAll().toString();
+		var output = proc.stdout.readAll().toString();
+		var errorResult = proc.stderr.readAll().toString();
 		var exitCode = proc.exitCode();
-		if (exitCode != 0) {
-			var errorResult = proc.stderr.readAll().toString();
+		proc.close();
+		// append user output to results
+		
+		if (exitCode != 0)
 			writeTopLevelErrorJson(paths.outputResults, errorResult.trim());
-		} else
-			File.saveContent(paths.outputResults, result);
+
 		return exitCode;
 	}
 
@@ -122,6 +117,11 @@ Options:
 	// Check command-line arguments and return RunArgs if valid or exit with error
 	static function parseArgs():RunArgs {
 		var args = Sys.args();
+		args = [
+			"identity",
+			"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/identity/",
+			"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/tmp_output/"
+		];
 		var flags = args.filter(x -> x.startsWith("-")).map(x -> x.toLowerCase());
 		if (flags.contains("-h") || flags.contains("--help"))
 			writeHelp();

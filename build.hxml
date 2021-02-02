@@ -1,4 +1,4 @@
 -main Runner
--cp src/
+-cp src
 -neko bin/runner.n
 -lib buddy
