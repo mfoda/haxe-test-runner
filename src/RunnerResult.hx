@@ -27,7 +27,7 @@ class RunnerResult {
 		return {
 			version: version,
 			status: status.getName().toLowerCase(),
-			tests: tests,
+			tests: tests.map(x -> x.toJsonObj()),
 			message: message
 		};
 	}
