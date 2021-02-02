@@ -45,7 +45,7 @@ Options:
 	// Run the tests for the given exercise and produce a results.json
 	static function run(paths:Paths):Int {
 		var args = [
-			"-cp", '${paths.tmpDir}', "-L", "buddy", "-D", 'reporter=Reporter', "--run", "Test", "-resultPath", '${paths.outputDir}'
+			"-cp", '${paths.tmpDir}', "-L", "buddy", "-D", 'reporter=Reporter', "--run", "Test", "-resultPath", '${paths.outputResults}'
 		];
 		var proc = new sys.io.Process("haxe", args);
 		var output = proc.stdout.readAll().toString();
@@ -93,7 +93,7 @@ Options:
 	}
 
 	static function createTmpDir():String {
-		var path = "./tmp/haxe_test_runner";
+		var path = "./tmp/haxe_test_runner/";
 		FileTools.deleteDirRecursively(path);
 		FS.createDirectory(path);
 		return path;
@@ -120,9 +120,9 @@ Options:
 	static function parseArgs():RunArgs {
 		var args = Sys.args();
 		// args = [
-		// 	"identity",
-		// 	"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/identity/",
-		// 	"D:/source/haxe/haxe-test-runner/test/error/compile_exception_in_solution/tmp_output/"
+		// 	"hello-world",
+		// 	"D:/source/haxe/haxe-test-runner/test/pass/success2/hello-world/",
+		// 	"D:/source/haxe/haxe-test-runner/test/pass/success2/tmp_output/"
 		// ];
 		var flags = args.filter(x -> x.startsWith("-")).map(x -> x.toLowerCase());
 		if (flags.contains("-h") || flags.contains("--help"))

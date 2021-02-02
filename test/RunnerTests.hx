@@ -14,34 +14,36 @@ class RunnerTests extends buddy.SingleSuite {
 	static final runnerBin = Path.join([appDir, "..", "bin", "runner.n"]);
 
 	public function new() {
-		describe("Test results against golden tests", {
-			function filterDirs(path)
-				return FS.readDirectory(path).map(x -> Path.join([path, x])).filter(FS.isDirectory);
+		function filterDirs(path)
+			return FS.readDirectory(path).map(x -> Path.join([path, x])).filter(FS.isDirectory);
 
-			for (status in ["error", "pass", "fail"]) {
-				var testsPath = Path.join([appDir, status]);
-				var testDirs = filterDirs(testsPath);
-				for (testDir in testDirs) {
-					var slug = filterDirs(testDir)[0].split("/").pop();
-					var inputDir = Path.join([testDir, slug]);
-					var outputDir = Path.join([testDir, "tmp_output"]);
-					var runnerProc = new sys.io.Process("neko", [
-						runnerBin,
-						slug,
-						Path.addTrailingSlash(inputDir),
-						Path.addTrailingSlash(outputDir)
-					]);
-					// wait for runner process to finish
-					var exitCode = runnerProc.exitCode(true);
+		for (status in ["error", "pass", "fail"]) {
+			if (status == "fail")
+				return;
+			var testsPath = Path.join([appDir, status]);
+			var testDirs = filterDirs(testsPath);
+			for (testDir in testDirs) {
+				var slug = filterDirs(testDir)[0].split("/").pop();
+				var inputDir = Path.join([testDir, slug]);
+				var outputDir = Path.join([testDir, "tmp_output"]);
+				var runnerProc = new sys.io.Process("neko", [
+					runnerBin,
+					slug,
+					Path.addTrailingSlash(inputDir),
+					Path.addTrailingSlash(outputDir)
+				]);
+				// wait for runner process to finish
+				var exitCode = runnerProc.exitCode();
+				runnerProc.close();
 
-					it("runner exit code should only be 1 on error", {
-						if (status == "error")
-							exitCode.should.be(1);
-						if (status == "fail" || status == "pass")
-							exitCode.should.be(0);
+				var testName = testDir.split("/").pop();
+				var expectedExitCode = if (status == "error") 1 else 0;
+				describe(testName, {
+					it('exit code should be $expectedExitCode', {
+						exitCode.should.be(expectedExitCode);
 					});
 
-					it("runner results.json should match expected_results.json", {
+					it("results.json should match expected", {
 						var expectedFile = Path.join([testDir, "expected_results.json"]);
 						var expectedResults = Json.parse(File.getContent(expectedFile));
 						var actualFile = Path.join([outputDir, "results.json"]);
@@ -49,10 +51,10 @@ class RunnerTests extends buddy.SingleSuite {
 						// convert back to json string for comparison
 						Json.stringify(actualResults).should.be(Json.stringify(expectedResults));
 					});
-					break;
-				}
-				break;
+				});
+				// cleanup
+				// FileTools.deleteDirRecursively(outputDir);
 			}
-		});
+		}
 	}
 }
